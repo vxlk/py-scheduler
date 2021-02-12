@@ -53,7 +53,7 @@ class ThreadPool():
         return current_thread
 
     def busy_wait(self, desired_thread):
-        while not desired_thread.is_alive():
+        while desired_thread.is_alive():
             none = None
 
     # todo: doesnt respect size of max_num_threads
