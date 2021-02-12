@@ -20,7 +20,7 @@ class ThreadPool():
         if found_thread != None:
             # thread is alive if can't join so it is active if it isn't alive
             # not too sure about this might just wanna subclass thread
-            return not found_thread.is_alive()
+            return found_thread.is_alive()
         return False
 
     def find_thread(self, str_name):
@@ -34,7 +34,6 @@ class ThreadPool():
         for thread in self.threads:
             if thread.name == str_thread_name:
                 if not thread.is_alive():
-                    print("is alive")
                     thread.name = str_thread_name
                     # idk how to handle the callback yet?
                     thread.start()
@@ -57,6 +56,7 @@ class ThreadPool():
         while not desired_thread.is_alive():
             none = None
 
+    # todo: doesnt respect size of max_num_threads
     def find_or_create_thread(self, str_name, _func, *kwargs):
         for thread in self.threads:
             if thread.name == str_name:
@@ -65,7 +65,12 @@ class ThreadPool():
                 return thread
         else:
             if self.current_num_threads < self.max_num_threads:
-                new_thread = threading.Thread(target=_func, args=kwargs)
+                if len(kwargs) != 0:
+                    print("not here")
+                    new_thread = threading.Thread(target=_func, args=kwargs)
+                else:
+                    print("here")
+                    new_thread = threading.Thread(target=_func)
                 new_thread.name = str_name
                 self.threads.append(new_thread)
                 return new_thread
@@ -124,10 +129,11 @@ class Scheduler():
         
         self.run = True
 
-        self.scheduler_thread = self.thread_pool.find_or_create_thread("Scheduler", self.run_scheduler)
+        self.scheduler_thread = self.thread_pool.find_or_create_thread("Scheduler", self._run_scheduler)
         self.thread_pool.start_thread("Scheduler")
 
     def create_event(self, str_event_name, _func, *kwargs):
+        print("adding event " + str_event_name)
         self.scheduler_lock.acquire()
 
         event_thread = self.thread_pool.find_or_create_thread(str_event_name, _func, kwargs)
@@ -143,7 +149,7 @@ class Scheduler():
         for event in self.event_queue:
             print("Event: " + event.print())
 
-    def run_scheduler(self):
+    def _run_scheduler(self):
         print("event loop outer")
         while self.run:
             self.scheduler_lock.acquire()
@@ -152,7 +158,7 @@ class Scheduler():
                 print("event loop")
                 # run checks and stuff
                 event.pre_start()
-                # kick off the thread
+                # kick off the thread (also handle waiting if we have to)
                 self.thread_pool.start_thread(event.name)
             
             self.event_queue.clear()
@@ -166,7 +172,3 @@ class Scheduler():
 
     def kill(self):
         self.run = False
-
-        
-
-scheduler = Scheduler()
